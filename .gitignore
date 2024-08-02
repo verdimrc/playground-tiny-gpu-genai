@@ -1,6 +1,8 @@
 .env.unversioned
-data/
-sift1M/
+/faiss/data/
+/faiss/sift1M/
+/nemo/llama2-tokenizer/
+/nemo/law-qa-curated-v3-07212024-withtags-nosynth/
 
 # vscode: retain launch.json for sample invocation
 .vscode/*

@@ -3,93 +3,14 @@
 This document provides super succint notes on trying-out various ML/AI/GenAI algos/models on a
 single GPU with tiny memory.
 
-## 1. FAISS
+Table of contents:
 
-Pre-requisite: download the sift1M dataset
-([ref](https://github.com/facebookresearch/faiss/blob/main/benchs/README.md#getting-sift1m)).
+- [1. Nemo: pretraining with MCore](#1-nemo-pretraining-with-mcore)
+- [2. Stable Diffusion Web UI](#2-stable-diffusion-web-ui)
+- [3. FAISS GPU](#3-faiss-gpu)
 
-```console
-% /usr/bin/time gunzip bigann_base.bvecs.gz
-770.15user 64.59system 15:43.28elapsed 88%CPU (0avgtext+0avgdata 1780maxresident)k
-191298912inputs+257812504outputs (0major+236minor)pagefaults 0swaps
 
-% /usr/bin/time python3 bench_gpu_sift1m.py
-load data
-Loading sift1M...done
-============ Exact search
-add vectors to index
-warmup
-benchmark
-k=1 0.133 ms, R@1 0.9914
-k=2 0.127 ms, R@1 0.9930
-k=4 0.121 ms, R@1 0.9932
-k=8 0.120 ms, R@1 0.9932
-k=16 0.120 ms, R@1 0.9932
-k=32 0.121 ms, R@1 0.9922
-k=64 0.124 ms, R@1 0.9931
-k=128 0.130 ms, R@1 0.9932
-k=256 0.152 ms, R@1 0.9931
-k=512 0.166 ms, R@1 0.9923
-k=1024 0.230 ms, R@1 0.9931
-============ Approximate search
-train
-WARNING clustering 100000 points to 4096 centroids: please provide at least 159744 training points
-add vectors to index
-warmup
-benchmark
-nprobe=   1 0.004 ms recalls= 0.3818 0.4169 0.4169
-nprobe=   2 0.005 ms recalls= 0.4981 0.5538 0.5538
-nprobe=   4 0.008 ms recalls= 0.6051 0.6872 0.6872
-nprobe=   8 0.013 ms recalls= 0.6960 0.8068 0.8068
-nprobe=  16 0.022 ms recalls= 0.7606 0.8954 0.8954
-nprobe=  32 0.040 ms recalls= 0.7998 0.9548 0.9548
-nprobe=  64 0.071 ms recalls= 0.8159 0.9826 0.9826
-nprobe= 128 0.133 ms recalls= 0.8239 0.9956 0.9956
-nprobe= 256 0.243 ms recalls= 0.8270 0.9996 0.9996
-nprobe= 512 0.482 ms recalls= 0.8273 1.0000 1.0000
-375.32user 7.13system 0:53.81elapsed 710%CPU (0avgtext+0avgdata 1336632maxresident)k
-1453568inputs+8outputs (1620major+185185minor)pagefaults 0swaps
-
-# NOTE: next file is based on bench_gpu_sift1m.py, but with the GPU usage disabled.
-% /usr/bin/time python3 bench_cpu_sift1m.py
-load data
-Loading sift1M...done
-============ Exact search
-add vectors to index
-warmup
-benchmark
-k=1 2.672 ms, R@1 0.9914
-k=2 1.750 ms, R@1 0.9914
-k=4 1.000 ms, R@1 0.9914
-k=8 0.982 ms, R@1 0.9914
-k=16 0.998 ms, R@1 0.9914
-k=32 1.233 ms, R@1 0.9914
-k=64 1.202 ms, R@1 0.9914
-k=128 1.383 ms, R@1 0.9914
-k=256 1.160 ms, R@1 0.9914
-k=512 1.431 ms, R@1 0.9914
-k=1024 1.495 ms, R@1 0.9914
-============ Approximate search
-train
-WARNING clustering 100000 points to 4096 centroids: please provide at least 159744 training points
-add vectors to index
-warmup
-benchmark
-nprobe=   1 0.007 ms recalls= 0.3824 0.4173 0.4173
-nprobe=   2 0.009 ms recalls= 0.4980 0.5537 0.5537
-nprobe=   4 0.014 ms recalls= 0.6059 0.6875 0.6875
-nprobe=   8 0.027 ms recalls= 0.6956 0.8063 0.8063
-nprobe=  16 0.047 ms recalls= 0.7602 0.8950 0.8950
-nprobe=  32 0.078 ms recalls= 0.7973 0.9546 0.9546
-nprobe=  64 0.143 ms recalls= 0.8142 0.9825 0.9825
-nprobe= 128 0.254 ms recalls= 0.8223 0.9956 0.9956
-nprobe= 256 0.480 ms recalls= 0.8248 0.9996 0.9996
-nprobe= 512 0.915 ms recalls= 0.8251 1.0000 1.0000
-4205.51user 332.46system 3:52.14elapsed 1954%CPU (0avgtext+0avgdata 1497772maxresident)k
-9728inputs+0outputs (119major+76972minor)pagefaults 0swaps
-```
-
-## 2. Nemo: MCore
+## 1. Nemo: pretraining with MCore
 
 First, visit <https://huggingface.co/meta-llama/Llama-2-7b-hf> to download the tokenizers files
 (i.e., `tokenizer.json` and `tokenizer.model`). Registration required.
@@ -187,7 +108,7 @@ Theoretical memory footprints: weight and optimizer=776.41 MB
 1. <https://docs.nvidia.com/nemo-framework/user-guide/latest/getting-started.html>
 2. <https://github.com/brevdev/notebooks/blob/main/llama31_law.ipynb>
 
-## 3. Stable Diffusion Web UI
+## 2. Stable Diffusion Web UI
 
 It's best to run `./webui.sh` on a new virtual environment, because `./webui.sh` install lots of
 deps from PyPI.
@@ -217,9 +138,16 @@ The default model fits into my GPU.
 
 Test with this prompt:
 
-> a full-body portrait of a kamen rider, standing on a beautiful, green, lush, natural landscape with blue sky and water. The kamen rider must wear the mask.
+> a full-body photorealism picture of a kamen rider, standing on a beautiful, green, lush, natural
+> landscape with blue sky and water. The kamen rider must wear the mask, and is standing on a much
+> higher elevated ground, far far away from the background, projecting a majestic natural landscape.
+> Remember, I want to see a photorealism picture.  Oh, and I want Kamer Rider Black.
 
-Leave the settings on their default, but we'll vary the batch hyperparameters.
+and negative prompt:
+
+> Image styles that are animated, cartoonish, water color, painting, color pencil, crayon.
+
+Leave the other settings on their default, but we'll vary the `batch` hyperparameters.
 
 ```text
 Steps: 20, Sampler: DPM++ 2M, Schedule type: Karras, CFG scale: 7, Seed: 1741860054,
@@ -252,4 +180,96 @@ XXXXXXXXXX                          Fri Aug  2 15:27:04 2024  552.41
 $ gpustat -a -i 2
 XXXXXXXXXX                          Fri Aug  2 15:30:44 2024  552.41
 [0] NVIDIA RTX A1000 6GB Laptop GPU | 84°C,  ?? %, 100 % (E:   0 %  D:   0 %),   13 /  13 W |  4304 /  6144 MB | xxxxxx:python3.10/389746(?M)
+```
+
+## 3. FAISS GPU
+
+Pre-requistes: [sift1M
+dataset](https://github.com/facebookresearch/faiss/blob/main/benchs/README.md#getting-sift1m) and
+GPU-version of FAISS.
+
+It's best to create a new conda environment to install the [conda-forge
+build](https://github.com/facebookresearch/faiss/blob/main/INSTALL.md#installing-faiss-via-conda),
+rather than installing the [older faiss-gpu from Pypi which does not support
+python>3.10](https://pypi.org/project/faiss-gpu/#files).
+
+```console
+% /usr/bin/time gunzip bigann_base.bvecs.gz
+770.15user 64.59system 15:43.28elapsed 88%CPU (0avgtext+0avgdata 1780maxresident)k
+191298912inputs+257812504outputs (0major+236minor)pagefaults 0swaps
+
+% /usr/bin/time python3 bench_gpu_sift1m.py
+load data
+Loading sift1M...done
+============ Exact search
+add vectors to index
+warmup
+benchmark
+k=1 0.133 ms, R@1 0.9914
+k=2 0.127 ms, R@1 0.9930
+k=4 0.121 ms, R@1 0.9932
+k=8 0.120 ms, R@1 0.9932
+k=16 0.120 ms, R@1 0.9932
+k=32 0.121 ms, R@1 0.9922
+k=64 0.124 ms, R@1 0.9931
+k=128 0.130 ms, R@1 0.9932
+k=256 0.152 ms, R@1 0.9931
+k=512 0.166 ms, R@1 0.9923
+k=1024 0.230 ms, R@1 0.9931
+============ Approximate search
+train
+WARNING clustering 100000 points to 4096 centroids: please provide at least 159744 training points
+add vectors to index
+warmup
+benchmark
+nprobe=   1 0.004 ms recalls= 0.3818 0.4169 0.4169
+nprobe=   2 0.005 ms recalls= 0.4981 0.5538 0.5538
+nprobe=   4 0.008 ms recalls= 0.6051 0.6872 0.6872
+nprobe=   8 0.013 ms recalls= 0.6960 0.8068 0.8068
+nprobe=  16 0.022 ms recalls= 0.7606 0.8954 0.8954
+nprobe=  32 0.040 ms recalls= 0.7998 0.9548 0.9548
+nprobe=  64 0.071 ms recalls= 0.8159 0.9826 0.9826
+nprobe= 128 0.133 ms recalls= 0.8239 0.9956 0.9956
+nprobe= 256 0.243 ms recalls= 0.8270 0.9996 0.9996
+nprobe= 512 0.482 ms recalls= 0.8273 1.0000 1.0000
+375.32user 7.13system 0:53.81elapsed 710%CPU (0avgtext+0avgdata 1336632maxresident)k
+1453568inputs+8outputs (1620major+185185minor)pagefaults 0swaps
+
+# NOTE: next file is based on bench_gpu_sift1m.py, but with the GPU usage disabled.
+% /usr/bin/time python3 bench_cpu_sift1m.py
+load data
+Loading sift1M...done
+============ Exact search
+add vectors to index
+warmup
+benchmark
+k=1 2.672 ms, R@1 0.9914
+k=2 1.750 ms, R@1 0.9914
+k=4 1.000 ms, R@1 0.9914
+k=8 0.982 ms, R@1 0.9914
+k=16 0.998 ms, R@1 0.9914
+k=32 1.233 ms, R@1 0.9914
+k=64 1.202 ms, R@1 0.9914
+k=128 1.383 ms, R@1 0.9914
+k=256 1.160 ms, R@1 0.9914
+k=512 1.431 ms, R@1 0.9914
+k=1024 1.495 ms, R@1 0.9914
+============ Approximate search
+train
+WARNING clustering 100000 points to 4096 centroids: please provide at least 159744 training points
+add vectors to index
+warmup
+benchmark
+nprobe=   1 0.007 ms recalls= 0.3824 0.4173 0.4173
+nprobe=   2 0.009 ms recalls= 0.4980 0.5537 0.5537
+nprobe=   4 0.014 ms recalls= 0.6059 0.6875 0.6875
+nprobe=   8 0.027 ms recalls= 0.6956 0.8063 0.8063
+nprobe=  16 0.047 ms recalls= 0.7602 0.8950 0.8950
+nprobe=  32 0.078 ms recalls= 0.7973 0.9546 0.9546
+nprobe=  64 0.143 ms recalls= 0.8142 0.9825 0.9825
+nprobe= 128 0.254 ms recalls= 0.8223 0.9956 0.9956
+nprobe= 256 0.480 ms recalls= 0.8248 0.9996 0.9996
+nprobe= 512 0.915 ms recalls= 0.8251 1.0000 1.0000
+4205.51user 332.46system 3:52.14elapsed 1954%CPU (0avgtext+0avgdata 1497772maxresident)k
+9728inputs+0outputs (119major+76972minor)pagefaults 0swaps
 ```

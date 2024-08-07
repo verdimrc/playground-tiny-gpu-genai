@@ -1,14 +1,99 @@
 # Playground: dev/test models on RTX A1000 6GB
 
-This document provides super succint notes on trying-out various ML/AI/GenAI algos/models on a
+This document provides super succinct notes on trying-out various ML/AI/GenAI algos/models on a
 single GPU with tiny memory.
 
 Table of contents:
 
+- [NVIDIA NIM: text embedding](#nvidia-nim-text-embedding)
 - [1. Nemo: pretraining with MCore](#1-nemo-pretraining-with-mcore)
 - [2. Stable Diffusion Web UI](#2-stable-diffusion-web-ui)
 - [3. FAISS GPU](#3-faiss-gpu)
 
+## NVIDIA NIM: text embedding
+
+Let's a run a 340m embedding model (with NIM container) on this local GPU.
+
+Pre-requisite: able to authenticate to able to pull container images from NGC. Visit
+<https://ngc.nvidia.com> to sign-up.
+
+First, pull the container image.
+
+```bash
+# Follow documentation.
+docker login nvcr.io
+
+docker pull nvcr.io/nim/nvidia/nv-embedqa-e5-v5:1.0.1
+```
+
+Special steps for WSL2 Ubuntu users who're affected by [WSL
+issue-11277](https://github.com/microsoft/WSL/issues/11277) -- `nvidia-smi` segfaults due to driver
+mismatch between host and WSL.
+
+```bash
+mkdir -p ~/.cache/nim
+docker run -it --rm --runtime=nvidia --gpus all --shm-size=16GB -e NGC_API_KEY -u $(id -u) -p 8000:8000 \
+-v "$HOME/.cache/nim:/opt/nim/.cache" \
+nvcr.io/nim/nvidia/nv-embedqa-e5-v5:1.0.1 \
+/bin/bash
+nemo@fd66eec68196:/$ mkdir -p /opt/nim/.cache/nim-embedding/app/src/tools/
+nemo@fd66eec68196:/$ cp -a /app/src/tools/nim/ /opt/nim/.cache/nim-embedding/app/src/tools/nim/
+
+# Edit on host: modify ngc_models.py to read from an .xml file instead of nvidia-smi.
+nvidia-smi -q --xml-format > ~/nvidia-smi-q.xml
+vi ~/.cache/nim/nim-embedding/app/src/tools/nim
+
+# Edit on container: modify ngc_models.py to read from an .xml file instead of nvidia-smi.
+docker run -it --rm --runtime=nvidia --gpus all --shm-size=16GB -e NGC_API_KEY -u $(id -u) -p 8000:8000 \
+-v "$HOME/.cache/nim:/opt/nim/.cache" \
+-v "$HOME/.cache/nim/nim-embedding/app/src/tools/nim:/app/src/tools/nim" \
+-v "$HOME/nvidia-smi-q.xml:/tmp/nvidia-smi-q.xml" \
+nvcr.io/nim/nvidia/nv-embedqa-e5-v5:1.0.1 \
+/bin/bash -c "cd /app/src/tools/nim ; exec /bin/bash"
+
+# Here's the patch: TODO HAHA
+...
+```
+
+And here we go...
+
+```bash
+# When all's good, we're ready to go. If you're not affected by WSL issue-11277, remove the lines
+# that mount the patched code and .xml files to the container.
+nvidia-smi -q --xml-format > ~/nvidia-smi-q.xml    # In case .xml file is missing.
+docker run -it --rm --runtime=nvidia --gpus all --shm-size=16GB -e NGC_API_KEY -u $(id -u) -p 8000:8000 \
+-v "$HOME/.cache/nim:/opt/nim/.cache" \
+-v "$HOME/.cache/nim/nim-embedding/app/src/tools/nim:/app/src/tools/nim" \
+-v "$HOME/nvidia-smi-q.xml:/tmp/nvidia-smi-q.xml" \
+nvcr.io/nim/nvidia/nv-embedqa-e5-v5:1.0.1
+
+# Test the local endpoint from a separate terminal.
+
+# FAQ: when localhost endpoint gives "curl: (35) error:0A00010B:SSL routines::wrong version number",
+# make sure to use http instead of https.
+curl -X "POST" \
+  "http://localhost:8000/v1/embeddings" \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+"input": ["Hello world"],
+"model": "nvidia/nv-embedqa-e5-v5",
+"input_type": "query"
+}'
+
+# FAQ: when localhost endpoint gives "curl: (35) error:0A00010B:SSL routines::wrong version number",
+# make sure to use http instead of https.
+curl -X POST http://127.0.0.1:8000/v1/embeddings \
+  -H 'accept: application/json' \
+  -H "Content-Type: application/json" \
+  -d '{
+    "input": ["What is the capital of France?"],
+    "model": "nvidia/nv-embedqa-e5-v5",
+    "input_type": "query",
+    "encoding_format": "float",
+    "truncate": "NONE"
+  }'
+```
 
 ## 1. Nemo: pretraining with MCore
 

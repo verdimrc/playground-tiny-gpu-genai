@@ -5,12 +5,12 @@ single GPU with tiny memory.
 
 Table of contents:
 
-- [NVIDIA NIM: text embedding](#nvidia-nim-text-embedding)
-- [1. Nemo: pretraining with MCore](#1-nemo-pretraining-with-mcore)
-- [2. Stable Diffusion Web UI](#2-stable-diffusion-web-ui)
-- [3. FAISS GPU](#3-faiss-gpu)
+- [1. NVIDIA NIM: text embedding](#1-nvidia-nim-text-embedding)
+- [2. Nemo: pretraining with MCore](#2-nemo-pretraining-with-mcore)
+- [3. Stable Diffusion Web UI](#3-stable-diffusion-web-ui)
+- [4. FAISS GPU](#4-faiss-gpu)
 
-## NVIDIA NIM: text embedding
+## 1. NVIDIA NIM: text embedding
 
 Let's a run a 340m embedding model (with NIM container) on this local GPU.
 
@@ -26,49 +26,47 @@ docker login nvcr.io
 docker pull nvcr.io/nim/nvidia/nv-embedqa-e5-v5:1.0.1
 ```
 
-Special steps for WSL2 Ubuntu users who're affected by [WSL
-issue-11277](https://github.com/microsoft/WSL/issues/11277) -- `nvidia-smi` segfaults due to driver
-mismatch between host and WSL.
+WSL2 Ubuntu users affected by [WSL issue #11277](https://github.com/microsoft/WSL/issues/11277) --
+*`nvidia-smi` segfaults due to driver mismatch between host and WSL* -- needs to follow the
+additional steps below (click to expand).
+
+<details>
+<summary>Additional steps for WSL issue #11277</summary>
 
 ```bash
-mkdir -p ~/.cache/nim
-docker run -it --rm --runtime=nvidia --gpus all --shm-size=16GB -e NGC_API_KEY -u $(id -u) -p 8000:8000 \
--v "$HOME/.cache/nim:/opt/nim/.cache" \
-nvcr.io/nim/nvidia/nv-embedqa-e5-v5:1.0.1 \
-/bin/bash
-nemo@fd66eec68196:/$ mkdir -p /opt/nim/.cache/nim-embedding/app/src/tools/
-nemo@fd66eec68196:/$ cp -a /app/src/tools/nim/ /opt/nim/.cache/nim-embedding/app/src/tools/nim/
+# On host
+mkdir -p ~/.cache/nim/nim-embedding/app/src/tools/nim/
+docker run -it --rm -u $(id -u) \
+    -v "$HOME/.cache/nim:/opt/nim/.cache" \
+    nvcr.io/nim/nvidia/nv-embedqa-e5-v5:1.0.1 \
+    cp /app/src/tools/nim/ngc_models.py /opt/nim/.cache/nim-embedding/app/src/tools/nim/ngc_models.py
 
-# Edit on host: modify ngc_models.py to read from an .xml file instead of nvidia-smi.
-nvidia-smi -q --xml-format > ~/nvidia-smi-q.xml
-vi ~/.cache/nim/nim-embedding/app/src/tools/nim
+# Yep, nvidia-smi.exe is not a typo. This is the recommendation from the WSL issue.
+nvidia-smi.exe -q --xml-format > ~/.cache/nim/nim-embedding/app/src/tools/nim/nvidia-smi-q.xml
 
-# Edit on container: modify ngc_models.py to read from an .xml file instead of nvidia-smi.
-docker run -it --rm --runtime=nvidia --gpus all --shm-size=16GB -e NGC_API_KEY -u $(id -u) -p 8000:8000 \
--v "$HOME/.cache/nim:/opt/nim/.cache" \
--v "$HOME/.cache/nim/nim-embedding/app/src/tools/nim:/app/src/tools/nim" \
--v "$HOME/nvidia-smi-q.xml:/tmp/nvidia-smi-q.xml" \
-nvcr.io/nim/nvidia/nv-embedqa-e5-v5:1.0.1 \
-/bin/bash -c "cd /app/src/tools/nim ; exec /bin/bash"
-
-# Here's the patch: TODO HAHA
-...
+# Patch this specific Python module to read from the .xml.
+patch ~/.cache/nim/nim-embedding/app/src/tools/nim/ngc_models.py nim/nv-embedqa-e5-v5__1.0.1/ngc_models.py.diff \
+    || echo "Patching error."
 ```
 
-And here we go...
+</details>
+
+And here we go... Let's run the NIM endpoint.
 
 ```bash
 # When all's good, we're ready to go. If you're not affected by WSL issue-11277, remove the lines
 # that mount the patched code and .xml files to the container.
-nvidia-smi -q --xml-format > ~/nvidia-smi-q.xml    # In case .xml file is missing.
+export NGC_API_KEY=$(ngc-apikey.py personal)   # Change this to your own key.
 docker run -it --rm --runtime=nvidia --gpus all --shm-size=16GB -e NGC_API_KEY -u $(id -u) -p 8000:8000 \
--v "$HOME/.cache/nim:/opt/nim/.cache" \
--v "$HOME/.cache/nim/nim-embedding/app/src/tools/nim:/app/src/tools/nim" \
--v "$HOME/nvidia-smi-q.xml:/tmp/nvidia-smi-q.xml" \
-nvcr.io/nim/nvidia/nv-embedqa-e5-v5:1.0.1
+    -v "$HOME/.cache/nim:/opt/nim/.cache" \
+    -v "$HOME/.cache/nim/nim-embedding/app/src/tools/nim/ngc_models.py:/app/src/tools/nim/ngc_models.py" \
+    -v "$HOME/.cache/nim/nim-embedding/app/src/tools/nim/nvidia-smi-q.xml:/app/src/tools/nim/nvidia-smi-q.xml" \
+    nvcr.io/nim/nvidia/nv-embedqa-e5-v5:1.0.1
+```
 
-# Test the local endpoint from a separate terminal.
+Test the local endpoint from a separate terminal.
 
+```bash
 # FAQ: when localhost endpoint gives "curl: (35) error:0A00010B:SSL routines::wrong version number",
 # make sure to use http instead of https.
 curl -X "POST" \
@@ -95,7 +93,9 @@ curl -X POST http://127.0.0.1:8000/v1/embeddings \
   }'
 ```
 
-## 1. Nemo: pretraining with MCore
+To stop the NIM endpoint, go back to the terminal where the container runs, then press Ctrl+C.
+
+## 2. Nemo: pretraining with MCore
 
 First, visit <https://huggingface.co/meta-llama/Llama-2-7b-hf> to download the tokenizers files
 (i.e., `tokenizer.json` and `tokenizer.model`). Registration required.
@@ -193,7 +193,7 @@ Theoretical memory footprints: weight and optimizer=776.41 MB
 1. <https://docs.nvidia.com/nemo-framework/user-guide/latest/getting-started.html>
 2. <https://github.com/brevdev/notebooks/blob/main/llama31_law.ipynb>
 
-## 2. Stable Diffusion Web UI
+## 3. Stable Diffusion Web UI
 
 It's best to run `./webui.sh` on a new virtual environment, because `./webui.sh` install lots of
 deps from PyPI.
@@ -267,7 +267,7 @@ XXXXXXXXXX                          Fri Aug  2 15:30:44 2024  552.41
 [0] NVIDIA RTX A1000 6GB Laptop GPU | 84°C,  ?? %, 100 % (E:   0 %  D:   0 %),   13 /  13 W |  4304 /  6144 MB | xxxxxx:python3.10/389746(?M)
 ```
 
-## 3. FAISS GPU
+## 4. FAISS GPU
 
 Pre-requistes: [sift1M
 dataset](https://github.com/facebookresearch/faiss/blob/main/benchs/README.md#getting-sift1m) and

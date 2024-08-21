@@ -1,0 +1,8 @@
+139,140c139,142
+<         p = Popen(["nvidia-smi", "-q", "--xml-format"], stdout=PIPE)
+<         stdout, _ = p.communicate()
+---
+>         # p = Popen(["nvidia-smi", "-q", "--xml-format"], stdout=PIPE)
+>         # stdout, _ = p.communicate()
+>         with open(os.path.dirname(__file__) + '/nvidia-smi-q.xml') as f:
+>             stdout = f.read()

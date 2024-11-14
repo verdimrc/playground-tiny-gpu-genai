@@ -6,7 +6,7 @@ single GPU with tiny memory.
 Table of contents:
 
 - [1. NVIDIA NIM: text embedding](#1-nvidia-nim-text-embedding)
-- [2. Nemo: pretraining with MCore](#2-nemo-pretraining-with-mcore)
+- [2. Nemo-1.0: pretraining with MCore](#2-nemo-10-pretraining-with-mcore)
 - [3. Stable Diffusion Web UI](#3-stable-diffusion-web-ui)
 - [4. FAISS GPU](#4-faiss-gpu)
 
@@ -95,7 +95,7 @@ curl -X POST http://127.0.0.1:8000/v1/embeddings \
 
 To stop the NIM endpoint, go back to the terminal where the container runs, then press Ctrl+C.
 
-## 2. Nemo: pretraining with MCore
+## 2. Nemo-1.0: pretraining with MCore
 
 First, visit <https://huggingface.co/meta-llama/Llama-2-7b-hf> to download the tokenizers files
 (i.e., `tokenizer.json` and `tokenizer.model`). Registration required.
@@ -190,7 +190,7 @@ Theoretical memory footprints: weight and optimizer=776.41 MB
 
 **References:**
 
-1. <https://docs.nvidia.com/nemo-framework/user-guide/latest/getting-started.html>
+1. <https://docs.nvidia.com/nemo-framework/user-guide/24.07/getting-started.html>
 2. <https://github.com/brevdev/notebooks/blob/main/llama31_law.ipynb>
 
 ## 3. Stable Diffusion Web UI

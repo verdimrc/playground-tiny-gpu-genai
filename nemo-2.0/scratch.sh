@@ -58,7 +58,7 @@ python -c 'import nemo; print(nemo.__file__)'
    mkdir /tmp/home-haha
    export HOME=/tmp/home-haha
    git config --global --add safe.directory /opt/NeMo
-git rev-parse HEAD
+( cd /opt/NeMo ; git rev-parse HEAD )
 #33ccb6eca9c76386544cd3683275f5d846abdf82
 
 ln -s /haha/llama3_pretraining.py /workspace/nemo-run/
@@ -71,11 +71,24 @@ rm -fr /tmp/checkpoints/llama3/
 python llama3_pretraining.py
 
 
-
-
+####
 # https://github.com/NVIDIA/NeMo/blob/33ccb6eca9c76386544cd3683275f5d846abdf82/nemo/collections/llm/recipes/llama3_8b.py#L173
 #
 # In the end, press n (otherwise, y means to launch, and without preparation, may fail -- expected).
 nemo llm pretrain --factory llama3_8b
 nemo llm train    --factory llama3_8b  # Error: no factory
 nemo llm finetune --factory llama3_8b
+
+
+######
+huggingface-cli login
+# then, provide HF credential.
+
+# python:
+from nemo.lightning.io import import_ckpt
+from nemo.collections import llm
+# Below need to get HF approval to the model.
+imported_path = import_ckpt(llm.LlamaModel(llm.Llama3Config8B), "hf://meta-llama/Meta-Llama-3.1-8B-Instruct")
+# Killed. DUnno why.
+
+##python /opt/NeMo/scripts/checkpoint_converters/convert_nemo1_to_nemo2.py

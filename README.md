@@ -33,7 +33,17 @@ additional steps below (click to expand).
 <details>
 <summary>Additional steps for WSL issue #11277</summary>
 
+**Recommended**: You're likely using the GPU driver 55x. Simply upgrade your graphics driver to the
+latest stable release (I'm on 566.03), and everything should work. You can go to the NVIDIA website
+to search and download the correct driver for your card.
+
+**Deprecated**: If you really have a strong aversion to avoid upgrading your graphics driver, then
+you need the steps below.
+
 ```bash
+################################################################################
+# Below are deprecated, and kept for historical preservation only.
+################################################################################
 # On host
 mkdir -p ~/.cache/nim/nim-embedding/app/src/tools/nim/
 docker run -it --rm -u $(id -u) \
